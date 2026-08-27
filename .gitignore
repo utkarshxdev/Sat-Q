@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing & caches
+.pytest_cache/
+.coverage
+htmlcov/
+runs/
+
+# Large Model weights & ONNX artifacts (>100 MB, not suitable for git)
+*.pth
+*.pt
+*.onnx
+*.onnx.data
+*.bin
+
+# Datasets and archives
+data/*.zip
+*.tar.gz
+satquery_colab_bundle.zip
