@@ -435,8 +435,8 @@ def main(args):
         for src in HF_SOURCES:
             try:
                 print_main(f"  Trying {src}...")
-                hf_train = load_dataset(src, split="train", streaming=True, token=os.environ.get("HF_TOKEN"))
-                hf_val = load_dataset(src, split="validation", streaming=True, token=os.environ.get("HF_TOKEN"))
+                hf_train = load_dataset(src, split="train", streaming=True)
+                hf_val = load_dataset(src, split="validation", streaming=True)
                 print_main(f"  ✓ Using {src}")
                 break
             except Exception as e:

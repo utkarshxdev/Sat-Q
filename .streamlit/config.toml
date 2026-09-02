@@ -1,0 +1,10 @@
+[theme]
+primaryColor = "#FF671F"
+backgroundColor = "#04142C"
+secondaryBackgroundColor = "#0B2046"
+textColor = "#F8FAFC"
+font = "sans serif"
+
+[layout]
+# Use wide mode by default for the command center feel
+maximized = true

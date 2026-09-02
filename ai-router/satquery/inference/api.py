@@ -47,33 +47,22 @@ def _load_change_model():
     model = SiameseUNet(in_channels=3, pretrained=False, freeze_stages=0).to(DEVICE)
     model.eval()
 
-    st_path = CKPT_DIR / "siamese_change.safetensors"
-    pth_path = CKPT_DIR / "siamese_change.pth"
-    
-    if st_path.exists():
-        try:
-            from safetensors.torch import load_file
-            model.load_state_dict(load_file(st_path), strict=True)
-            print(f"[SiameseUNet] Loaded safetensors: {st_path}")
-            return model, True
-        except ImportError:
-            pass
-
-    if pth_path.exists():
-        ckpt = torch.load(pth_path, map_location=DEVICE, weights_only=True)
+    ckpt_path = CKPT_DIR / "siamese_change.pth"
+    if ckpt_path.exists():
+        ckpt = torch.load(ckpt_path, map_location=DEVICE, weights_only=True)
         model.load_state_dict(ckpt["model_state_dict"], strict=True)
-        print(f"[SiameseUNet] Loaded checkpoint: {pth_path} "
+        print(f"[SiameseUNet] Loaded checkpoint: {ckpt_path} "
               f"(epoch {ckpt.get('epoch', '?')})")
     else:
         warnings.warn(
-            f"No checkpoint found at {pth_path}. "
+            f"No checkpoint found at {ckpt_path}. "
             "Running in MOCK mode — outputs are random. "
             "Run satquery/training/train_change.py to generate a checkpoint.",
             UserWarning,
             stacklevel=2,
         )
 
-    return model, pth_path.exists()
+    return model, ckpt_path.exists()
 
 
 @lru_cache(maxsize=1)
@@ -88,33 +77,22 @@ def _load_fusion_model():
     ).to(DEVICE)
     model.eval()
 
-    st_path = CKPT_DIR / "optical_sar_fused.safetensors"
-    pth_path = CKPT_DIR / "optical_sar_fused.pth"
-    
-    if st_path.exists():
-        try:
-            from safetensors.torch import load_file
-            model.load_state_dict(load_file(st_path), strict=True)
-            print(f"[FusionModel] Loaded safetensors: {st_path}")
-            return model, True
-        except ImportError:
-            pass
-
-    if pth_path.exists():
-        ckpt = torch.load(pth_path, map_location=DEVICE, weights_only=True)
+    ckpt_path = CKPT_DIR / "optical_sar_fused.pth"
+    if ckpt_path.exists():
+        ckpt = torch.load(ckpt_path, map_location=DEVICE, weights_only=True)
         model.load_state_dict(ckpt["model_state_dict"], strict=True)
-        print(f"[FusionModel] Loaded checkpoint: {pth_path} "
+        print(f"[FusionModel] Loaded checkpoint: {ckpt_path} "
               f"(epoch {ckpt.get('epoch', '?')})")
     else:
         warnings.warn(
-            f"No checkpoint found at {pth_path}. "
+            f"No checkpoint found at {ckpt_path}. "
             "Running in MOCK mode — outputs are random. "
             "Run satquery/training/train_fusion.py to generate a checkpoint.",
             UserWarning,
             stacklevel=2,
         )
 
-    return model, pth_path.exists()
+    return model, ckpt_path.exists()
 
 
 # ─── API Contract 1: Bi-Temporal Change Analysis ─────────────────────────────

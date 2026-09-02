@@ -34,6 +34,3 @@ satquery_colab_bundle.zip
 # Secrets
 .env
 *.env
-
-*.safetensors
-*.zip
