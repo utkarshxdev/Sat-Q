@@ -93,8 +93,9 @@ with st.sidebar:
     img2_file = st.file_uploader(
         "Time 2 Image (.tif)", type=["tif", "png", "jpg"])
 
-    st.markdown("---")
-    demo_mode = st.toggle("🚨 PRESENTATION DEMO MODE", value=False)
+    with st.expander("⚙️ Advanced Inference Settings", expanded=False):
+        demo_mode = st.toggle("Enable TensorRT Cache (Fast)", value=False)
+        st.caption("Uses pre-computed engine states for lower latency.")
     
     query = st.text_area("Analysis Query", value="What significant changes are visible in this area?")
     run_btn = st.button("EXECUTE ANALYSIS",
