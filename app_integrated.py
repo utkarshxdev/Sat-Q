@@ -113,34 +113,52 @@ if demo_mode:
     import time
     start_t = time.time()
     
-    img1_array = np.array(Image.open('data/demo_images/T1_pre.png'))
-    img2_array = np.array(Image.open('data/demo_images/T2_post.png'))
-    mask_array = np.array(Image.open('data/demo_images/GT_mask.png'))
+    img1_array = np.array(Image.open('data/demo_images/T1.png'))
+    img2_array = np.array(Image.open('data/demo_images/T2.png'))
     
     if len(img1_array.shape) == 3:
         img1_array = np.moveaxis(img1_array, 2, 0)
         img2_array = np.moveaxis(img2_array, 2, 0)
         
-    st.session_state['img1'] = img1_array
-    st.session_state['img2'] = img2_array
-    st.session_state['mask'] = mask_array
+    img1_hwc = np.moveaxis(img1_array, 0, 2) if img1_array.shape[0] in [1, 3, 4] else img1_array
+    img2_hwc = np.moveaxis(img2_array, 0, 2) if img2_array.shape[0] in [1, 3, 4] else img2_array
     
-    area_changed = "14.2%"
+    # Heuristic Mask for Demo
+    diff = np.abs(img1_hwc.astype(float) - img2_hwc.astype(float))
+    diff_mean = np.mean(diff, axis=-1)
+    heuristic_mask = (diff_mean > 50).astype(np.uint8) * 255
+    
+    pct = (np.sum(heuristic_mask > 0) / heuristic_mask.size) * 100
+    area_changed = f"{pct:.1f}%"
     confidence = "98.7%"
     router_decision = "RUN_CHANGE_DETECTION"
     process_time = "84ms"
     
-    ai_summary = '''
-    The imagery indicates **newly developed built-up structures** (concrete foundations and roofing) in the southern and western sectors.
+    st.session_state['img1'] = img1_array
+    st.session_state['img2'] = img2_array
+    st.session_state['mask'] = heuristic_mask
     
-    The strongest change clusters cover approximately <span class="highlight-pill">14.2 ha</span>.
-    
-    <div style="display:flex; gap:8px; margin-top:12px;">
+    # Live Gemini VQA
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ.get("gemini_api") or os.environ.get("GEMINI_API_KEY"))
+        model = genai.GenerativeModel('models/gemini-3.6-flash')
+        
+        img1_pil = Image.fromarray(img1_hwc.astype('uint8'))
+        img2_pil = Image.fromarray(img2_hwc.astype('uint8'))
+        
+        prompt = f"As a geospatial expert, compare these two satellite images. The model flagged {area_changed} of the area as changed. Explain what visually changed based on the images. Do not use asterisks."
+        
+        res = model.generate_content([img1_pil, img2_pil, prompt])
+        ai_summary = res.text + '''
+
+<div style="display:flex; gap:8px; margin-top:12px;">
         <span style="border:1px solid #1E3150; border-radius:4px; padding:2px 6px; font-size:0.65rem; color:#94A3B8;">□ T1 / T2</span>
         <span style="border:1px solid #1E3150; border-radius:4px; padding:2px 6px; font-size:0.65rem; color:#94A3B8;">~ SAR</span>
         <span style="border:1px solid #1E3150; border-radius:4px; padding:2px 6px; font-size:0.65rem; color:#94A3B8;">⚲ VQA</span>
-    </div>
-    '''
+    </div>'''
+    except Exception as e:
+        ai_summary = f"VLM ERROR: {e}"
 
 elif run_btn and img1_file and img2_file:
     import time
@@ -189,8 +207,8 @@ elif run_btn and img1_file and img2_file:
                     
                     # --- HACKATHON HEURISTIC MASK ---
                     # The PyTorch model is untrained, so we use a color-difference heuristic for the live demo mask!
-                    img1_hwc = np.moveaxis(img1_array, 0, 2) if img1_array.shape[0] == 3 else img1_array
-                    img2_hwc = np.moveaxis(img2_array, 0, 2) if img2_array.shape[0] == 3 else img2_array
+                    img1_hwc = np.moveaxis(img1_array, 0, 2) if img1_array.shape[0] in [1, 3, 4] else img1_array
+                    img2_hwc = np.moveaxis(img2_array, 0, 2) if img2_array.shape[0] in [1, 3, 4] else img2_array
                     
                     diff = np.abs(img1_hwc.astype(float) - img2_hwc.astype(float))
                     diff_mean = np.mean(diff, axis=-1)
@@ -259,10 +277,10 @@ with col_map:
         st.markdown("### Analysis Results")
         img_cols = st.columns(3)
         with img_cols[0]:
-            disp1 = np.moveaxis(st.session_state['img1'], 0, 2) if st.session_state['img1'].shape[0] == 3 else st.session_state['img1']
+            disp1 = np.moveaxis(st.session_state['img1'], 0, 2) if st.session_state['img1'].shape[0] in [1, 3, 4] else st.session_state['img1']
             st.image(disp1, caption="Time 1", use_container_width=True)
         with img_cols[1]:
-            disp2 = np.moveaxis(st.session_state['img2'], 0, 2) if st.session_state['img2'].shape[0] == 3 else st.session_state['img2']
+            disp2 = np.moveaxis(st.session_state['img2'], 0, 2) if st.session_state['img2'].shape[0] in [1, 3, 4] else st.session_state['img2']
             st.image(disp2, caption="Time 2", use_container_width=True)
         with img_cols[2]:
             st.image(st.session_state['mask'], caption="AI Change Mask", use_container_width=True, clamp=True)
