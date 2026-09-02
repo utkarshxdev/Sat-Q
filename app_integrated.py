@@ -101,6 +101,24 @@ with st.sidebar:
     run_btn = st.button("EXECUTE ANALYSIS",
                         use_container_width=True, type="primary")
 
+import torch
+from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+from peft import PeftModel
+from qwen_vl_utils import process_vision_info
+
+@st.cache_resource
+def load_qwen_vlm():
+    base_id = "Qwen/Qwen2.5-VL-3B-Instruct"
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
+    base_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        base_id, 
+        torch_dtype=torch.float16,
+        device_map=device
+    )
+    model = PeftModel.from_pretrained(base_model, "./adapter")
+    processor = AutoProcessor.from_pretrained(base_id)
+    return model, processor, device
+
 # ─── DEFAULTS ─────────────────────────────────────────────────────────────
 area_changed = "0.0%"
 confidence = "0.0%"
@@ -251,21 +269,38 @@ elif run_btn and img1_file and img2_file:
                 ai_summary = "Backend not ready (models missing)."
                 
         elif router_decision == "SINGLE_IMAGE_VQA":
-            import google.generativeai as genai
-            genai.configure(api_key=os.environ.get("gemini_api") or os.environ.get("GEMINI_API_KEY"))
-            model = genai.GenerativeModel('models/gemini-3.6-flash')
             try:
-                img_pil = Image.fromarray(img1_array.astype('uint8')) if img1_array.dtype != 'uint8' else Image.fromarray(img1_array)
-                res = model.generate_content([img_pil, "As a geospatial intelligence expert, answer this query about the satellite image: " + query])
+                model, processor, device = load_qwen_vlm()
+                img_pil = Image.fromarray(img1_hwc.astype('uint8')) if img1_hwc.dtype != 'uint8' else Image.fromarray(img1_hwc)
                 
-                ai_summary = res.text
+                messages = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "image", "image": img_pil},
+                            {"type": "text", "text": "As a geospatial intelligence expert, answer this query about the satellite image: " + query}
+                        ]
+                    }
+                ]
+                
+                text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+                image_inputs, video_inputs = process_vision_info(messages)
+                inputs = processor(
+                    text=[text], images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt"
+                ).to(device)
+                
+                generated_ids = model.generate(**inputs, max_new_tokens=128)
+                generated_ids_trimmed = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
+                ai_summary = processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                
                 confidence = "99.0%"
                 st.session_state['img1'] = img1_array
                 st.session_state['img2'] = img2_array
-                # Provide a blank mask so the layout doesn't crash
                 st.session_state['mask'] = np.zeros_like(img1_array[:, :, 0])
             except Exception as e:
+                print("VLM Error:", e)
                 ai_summary = f"VLM Error: {str(e)}"
+
             
     process_time = f"{int((time.time() - start_t) * 1000)}ms"
 
