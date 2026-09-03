@@ -2,19 +2,18 @@
 SatQuery AI - Fully Functional Integrated ISRO UI
 Combines Palak's HTML/CSS with Utkarsh's PyTorch models, Jayant's Geo Pipeline, and Chanchal's Router.
 """
+import sys
+import os
+
+# Add required paths for imports before importing from app
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ai-router"))
+
 from app.schemas import ToolRequest, ImageContext
 from app.router import route_request
 import streamlit as st
 import numpy as np
 from PIL import Image
 import tempfile
-import sys
-import os
-
-# Add required paths for imports
-
-# Add required paths for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ai-router"))
 
 
 # Try importing the actual backend (with fallbacks if the models aren't present yet)
