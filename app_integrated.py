@@ -236,7 +236,7 @@ st.html("""
     /* Hide default Streamlit elements */
     #MainMenu { visibility: hidden; }
     footer { visibility: hidden; }
-    header { visibility: hidden; }
+    header[data-testid="stHeader"] { background: transparent; }
 </style>
 """)
 
