@@ -324,9 +324,11 @@ def gemini_fallback(images_pil, prompt):
             continue
     return "All Gemini models temporarily unavailable. Please try again."
 
+ENABLE_LOCAL_VLM = False  # Toggle to True to re-enable Ananya's Qwen model
+
 def run_vlm(images_pil, prompt):
     """Try local Qwen+LoRA first, fall back to Gemini API."""
-    if LOCAL_VLM_AVAILABLE:
+    if ENABLE_LOCAL_VLM and LOCAL_VLM_AVAILABLE:
         try:
             model, processor, device = load_qwen_vlm()
             messages = [{"role": "user", "content": []}]
