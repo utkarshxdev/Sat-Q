@@ -360,7 +360,7 @@ col_map, col_chat = st.columns([1.5, 1])
 
 with col_map:
     # Top Map Area
-    if 'img1' in st.session_state and 'mask' in st.session_state:
+    if st.session_state.get('img1') is not None and st.session_state.get('mask') is not None:
         st.markdown("### Analysis Results")
         img_cols = st.columns(3)
         with img_cols[0]:
