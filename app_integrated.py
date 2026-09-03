@@ -140,18 +140,20 @@ def load_qwen_vlm():
     
     # Check if model is already cached locally to avoid hanging on download
     from huggingface_hub import try_to_load_from_cache
-    cached = try_to_load_from_cache(base_id, "model.safetensors.index.json")
-    if cached is None or isinstance(cached, str) == False:
-        raise RuntimeError("Base model not cached locally. Skipping to Gemini fallback.")
+    cached = try_to_load_from_cache(base_id, "config.json")
+    if not cached or isinstance(cached, str) == False:
+        raise RuntimeError("Base model config not cached locally. Skipping to Gemini fallback.")
     
+    # Use local_files_only=True to instantly fail if the 6GB download is incomplete
     base_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         base_id, 
         torch_dtype=torch.float16,
         device_map=device,
+        local_files_only=True,
         token=hf_token
     )
     model = PeftModel.from_pretrained(base_model, "./adapter")
-    processor = AutoProcessor.from_pretrained(base_id, token=hf_token)
+    processor = AutoProcessor.from_pretrained(base_id, local_files_only=True, token=hf_token)
     return model, processor, device
 
 def gemini_fallback(images_pil, prompt):
