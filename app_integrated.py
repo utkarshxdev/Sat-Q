@@ -386,19 +386,19 @@ with col_map:
     <div style="display:flex; justify-content:space-between; gap:16px;">
         <div class="stat-card" style="flex:1;">
             <div class="stat-label">TOTAL AREA CHANGED</div>
-            <div class="stat-value">{st.session_state.get('area_changed', area_changed)}</div>
+            <div class="stat-value">{st.session_state.get('area_changed', '0.0%')}</div>
         </div>
         <div class="stat-card" style="flex:1;">
             <div class="stat-label">MODEL CONFIDENCE</div>
-            <div class="stat-value text-green">{st.session_state.get('confidence', confidence)}</div>
+            <div class="stat-value text-green">{st.session_state.get('confidence', '0.0%')}</div>
         </div>
         <div class="stat-card" style="flex:1;">
             <div class="stat-label">ROUTER DECISION</div>
-            <div class="stat-value" style="font-size:1.1rem; margin-top:8px;">{st.session_state.get('router_decision', router_decision)}</div>
+            <div class="stat-value" style="font-size:1.1rem; margin-top:8px;">{st.session_state.get('router_decision', 'STANDBY')}</div>
         </div>
         <div class="stat-card" style="flex:1;">
             <div class="stat-label">INFERENCE TIME</div>
-            <div class="stat-value text-cyan">{st.session_state.get('process_time', process_time)}</div>
+            <div class="stat-value text-cyan">{st.session_state.get('process_time', '0ms')}</div>
         </div>
     </div>
     ''')
