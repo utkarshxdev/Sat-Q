@@ -195,52 +195,64 @@ def run_vlm(images_pil, prompt):
             print(f"Local VLM failed ({e}), falling back to Gemini API...")
     return gemini_fallback(images_pil, prompt)
 
-# ─── DEFAULTS ─────────────────────────────────────────────────────────────
-area_changed = "0.0%"
-confidence = "0.0%"
-ai_summary = "Waiting for input..."
-router_decision = "STANDBY"
-process_time = "0ms"
-
+# ─── DEFAULTS & STATE INIT ──────────────────────────────────────────────────
+for key, default_val in [
+    ('area_changed', "0.0%"),
+    ('confidence', "0.0%"),
+    ('router_decision', "STANDBY"),
+    ('process_time', "0ms"),
+    ('chat_history', []),
+    ('img1', None),
+    ('img2', None),
+    ('mask', None)
+]:
+    if key not in st.session_state:
+        st.session_state[key] = default_val
 
 # ─── MAIN LOGIC ───────────────────────────────────────────────────────────
-if demo_mode:
-    import time
-    start_t = time.time()
-    
-    img1_array = np.array(Image.open('data/demo_images/T1.png'))
-    img2_array = np.array(Image.open('data/demo_images/T2.png'))
-    
-    if len(img1_array.shape) == 3:
-        img1_array = np.moveaxis(img1_array, 2, 0)
-        img2_array = np.moveaxis(img2_array, 2, 0)
+if run_btn:
+    if demo_mode:
+        import time
+        start_t = time.time()
         
-    img1_hwc = np.moveaxis(img1_array, 0, 2) if img1_array.shape[0] in [1, 3, 4] else img1_array
-    img2_hwc = np.moveaxis(img2_array, 0, 2) if img2_array.shape[0] in [1, 3, 4] else img2_array
-    
-    # Heuristic Mask for Demo
-    diff = np.abs(img1_hwc.astype(float) - img2_hwc.astype(float))
-    diff_mean = np.mean(diff, axis=-1)
-    heuristic_mask = (diff_mean > 50).astype(np.uint8) * 255
-    
-    pct = (np.sum(heuristic_mask > 0) / heuristic_mask.size) * 100
-    area_changed = f"{pct:.1f}%"
-    confidence = "98.7%"
-    router_decision = "RUN_CHANGE_DETECTION"
-    process_time = "84ms"
-    
-    st.session_state['img1'] = img1_array
-    st.session_state['img2'] = img2_array
-    st.session_state['mask'] = heuristic_mask
-    
-    # Live VLM (Local Qwen → Gemini fallback)
-    try:
-        img1_pil = Image.fromarray(img1_hwc.astype('uint8'))
-        img2_pil = Image.fromarray(img2_hwc.astype('uint8'))
-        prompt = f"As a geospatial expert, compare these two satellite images. The model flagged {area_changed} of the area as changed. Explain what visually changed based on the images. Do not use asterisks."
-        ai_summary = run_vlm([img1_pil, img2_pil], prompt)
-    except Exception as e:
-        ai_summary = f"VLM ERROR: {e}"
+        img1_array = np.array(Image.open('data/demo_images/T1.png'))
+        img2_array = np.array(Image.open('data/demo_images/T2.png'))
+        
+        if len(img1_array.shape) == 3:
+            img1_array = np.moveaxis(img1_array, 2, 0)
+            img2_array = np.moveaxis(img2_array, 2, 0)
+            
+        img1_hwc = np.moveaxis(img1_array, 0, 2) if img1_array.shape[0] in [1, 3, 4] else img1_array
+        img2_hwc = np.moveaxis(img2_array, 0, 2) if img2_array.shape[0] in [1, 3, 4] else img2_array
+        
+        # Heuristic Mask for Demo
+        diff = np.abs(img1_hwc.astype(float) - img2_hwc.astype(float))
+        diff_mean = np.mean(diff, axis=-1)
+        heuristic_mask = (diff_mean > 50).astype(np.uint8) * 255
+        
+        pct = (np.sum(heuristic_mask > 0) / heuristic_mask.size) * 100
+        st.session_state['area_changed'] = f"{pct:.1f}%"
+        st.session_state['confidence'] = "98.7%"
+        st.session_state['router_decision'] = "RUN_CHANGE_DETECTION"
+        st.session_state['process_time'] = "84ms"
+        
+        st.session_state['img1'] = img1_array
+        st.session_state['img2'] = img2_array
+        st.session_state['mask'] = heuristic_mask
+        
+        # Live VLM (Local Qwen → Gemini fallback)
+        try:
+            img1_pil = Image.fromarray(img1_hwc.astype('uint8'))
+            img2_pil = Image.fromarray(img2_hwc.astype('uint8'))
+            prompt = f"As a geospatial expert, compare these two satellite images. The model flagged {st.session_state['area_changed']} of the area as changed. Explain what visually changed based on the images. Keep it to 1 paragraph. Do not use asterisks."
+            
+            # Put the actual sidebar query in the chat history
+            st.session_state['chat_history'] = [{"role": "user", "content": query}]
+            
+            ai_summary = run_vlm([img1_pil, img2_pil], prompt)
+            st.session_state['chat_history'].append({"role": "assistant", "content": ai_summary})
+        except Exception as e:
+            st.session_state['chat_history'].append({"role": "assistant", "content": f"VLM ERROR: {e}"})
 
 elif run_btn and img1_file and img2_file:
     import time
@@ -301,28 +313,29 @@ elif run_btn and img1_file and img2_file:
                     
                     # Calculate real percentage
                     pct = (np.sum(heuristic_mask > 0) / heuristic_mask.size) * 100
-                    area_changed = f"{pct:.1f}%"
-                    confidence = "89.4%"  # Hardcode a confident score
+                    st.session_state['area_changed'] = f"{pct:.1f}%"
+                    st.session_state['confidence'] = "89.4%"  # Hardcode a confident score
                     
                     # 🚀 LIVE CHATBOT (Local Qwen → Gemini fallback) 🚀
                     try:
                         img1_pil = Image.fromarray(img1_hwc.astype('uint8'))
                         img2_pil = Image.fromarray(img2_hwc.astype('uint8'))
-                        prompt = f"As a geospatial expert, compare these two satellite images (Time 1 and Time 2). The model flagged {area_changed} of the area as changed. Briefly explain what visually changed in 2-3 sentences based on the images, keeping a professional intelligence tone. Do not use asterisks."
+                        prompt = f"As a geospatial expert, compare these two satellite images (Time 1 and Time 2). The model flagged {st.session_state['area_changed']} of the area as changed. Briefly explain what visually changed in 2-3 sentences based on the images, keeping a professional intelligence tone. Do not use asterisks."
+                        
+                        st.session_state['chat_history'] = [{"role": "user", "content": query}]
                         ai_summary = run_vlm([img1_pil, img2_pil], prompt)
+                        st.session_state['chat_history'].append({"role": "assistant", "content": ai_summary})
                     except Exception as e:
                         print("VLM ERROR:", e)
-                        ai_summary = f"VLM ERROR: {e}"
+                        st.session_state['chat_history'].append({"role": "assistant", "content": f"VLM ERROR: {e}"})
                         
                     st.session_state['img1'] = img1_array
-
-
                     st.session_state['img2'] = img2_array
                     st.session_state['mask'] = result['change_mask']
                 except Exception as e:
-                    ai_summary = f"Inference Error: {e}"
+                    st.session_state['chat_history'] = [{"role": "assistant", "content": f"Inference Error: {e}"}]
             else:
-                ai_summary = "Backend not ready (models missing)."
+                st.session_state['chat_history'] = [{"role": "assistant", "content": "Backend not ready (models missing)."}]
                 
         elif router_decision == "SINGLE_IMAGE_VQA":
             try:
@@ -330,16 +343,17 @@ elif run_btn and img1_file and img2_file:
                 prompt = "As a geospatial intelligence expert, answer this query about the satellite image: " + query
                 ai_summary = run_vlm([img_pil], prompt)
                 
-                confidence = "99.0%"
+                st.session_state['confidence'] = "99.0%"
                 st.session_state['img1'] = img1_array
                 st.session_state['img2'] = img2_array
                 st.session_state['mask'] = np.zeros_like(img1_array[:, :, 0])
+                st.session_state['chat_history'] = [{"role": "assistant", "content": ai_summary}]
             except Exception as e:
                 print("VLM Error:", e)
-                ai_summary = f"VLM Error: {str(e)}"
+                st.session_state['chat_history'] = [{"role": "assistant", "content": f"VLM Error: {str(e)}"}]
 
             
-    process_time = f"{int((time.time() - start_t) * 1000)}ms"
+    st.session_state['process_time'] = f"{int((time.time() - start_t) * 1000)}ms"
 
 # ─── MAIN UI RENDER ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 col_map, col_chat = st.columns([1.5, 1])
@@ -390,33 +404,41 @@ with col_map:
     ''')
 
 with col_chat:
-    st.html(f"""
-    <div class="chat-container">
-    <div class="chat-header">
-    <div class="chat-tab active">VQA CHAT</div>
-    </div>
-    <div class="chat-body">
-    <!-- User Query -->
-    <div class="chat-msg" style="flex-direction:row-reverse;">
-    <div class="avatar user">AN</div>
-    <div class="msg-content" style="background:#091325;">
-    {query}
-    </div>
-    </div>
+    st.markdown("### VQA Chat")
+    
+    # Create a scrollable container for chat messages
+    chat_container = st.container(height=520)
+    
+    with chat_container:
+        if not st.session_state['chat_history']:
+            st.chat_message("assistant").write("Waiting for analysis to execute...")
         
-    <!-- AI Response -->
-    <div class="chat-msg">
-    <div class="avatar sq">SQ</div>
-    <div class="msg-content">
-    <div class="msg-header">
-    <span>SATQUERY AI</span>
-    <span class="text-green">{st.session_state.get('confidence', confidence)} CONFIDENCE</span>
-    </div>
-    <div>
-    {st.session_state.get('ai_summary', ai_summary)}
-    </div>
-    </div>
-    </div>
-    </div>
-    </div>
-    """)
+        for msg in st.session_state['chat_history']:
+            st.chat_message(msg["role"]).write(msg["content"])
+            
+    # Handle new chat input
+    if user_input := st.chat_input("Ask a follow-up question..."):
+        # Display user input immediately
+        st.session_state['chat_history'].append({"role": "user", "content": user_input})
+        with chat_container:
+            st.chat_message("user").write(user_input)
+            
+        # Run VLM with the current images
+        with chat_container:
+            with st.chat_message("assistant"):
+                with st.spinner("Analyzing..."):
+                    if 'img1' in st.session_state and st.session_state['img1'] is not None:
+                        img1_hwc = np.moveaxis(st.session_state['img1'], 0, 2) if st.session_state['img1'].shape[0] in [1, 3, 4] else st.session_state['img1']
+                        img2_hwc = np.moveaxis(st.session_state['img2'], 0, 2) if st.session_state['img2'].shape[0] in [1, 3, 4] else st.session_state['img2']
+                        
+                        img1_pil = Image.fromarray(img1_hwc.astype('uint8'))
+                        img2_pil = Image.fromarray(img2_hwc.astype('uint8'))
+                        
+                        try:
+                            response = run_vlm([img1_pil, img2_pil], user_input)
+                            st.write(response)
+                            st.session_state['chat_history'].append({"role": "assistant", "content": response})
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                    else:
+                        st.error("No images loaded. Please execute an analysis first.")
