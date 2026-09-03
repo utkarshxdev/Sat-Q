@@ -90,8 +90,17 @@ st.html("""
 
 # ─── SIDEBAR: INPUT CONTROLS ──────────────────────────────────────────────
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/en/thumb/5/58/ISRO_Logo.svg/1200px-ISRO_Logo.svg.png", width=150)
-    st.markdown("### SatQuery AI Engine")
+    st.html("""
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px; padding:12px 14px; background:#070F1E; border:1px solid #1E3150; border-radius:8px;">
+        <div style="width:36px; height:36px; border-radius:6px; background:linear-gradient(135deg, #FF671F, #00B4D8); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; color:white; flex-shrink:0;">
+            🛰️
+        </div>
+        <div>
+            <div style="font-size:0.7rem; font-weight:700; color:#FF671F; letter-spacing:1px; text-transform:uppercase;">ISRO DISASTER CORE</div>
+            <div style="font-size:1.05rem; font-weight:800; color:#F8FAFC; line-height:1.2;">SATQUERY AI</div>
+        </div>
+    </div>
+    """)
 
     img1_file = st.file_uploader(
         "Time 1 Image (.tif)", type=["tif", "png", "jpg"])
