@@ -45,46 +45,198 @@ st.set_page_config(
 # ─── GLOBAL CSS OVERRIDES (Palak's Code) ──────────────────────────────────
 st.html("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
-        background-color: #050A14 !important;
-        color: #F8FAFC !important;
+        background-color: #040912 !important;
+        color: #F0F4F8 !important;
     }
+
+    /* ─── PAGE LAYOUT ─── */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0.5rem !important;
         padding-bottom: 0 !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 1.25rem !important;
+        padding-right: 1.25rem !important;
+        max-width: 100% !important;
     }
+
+    /* ─── SIDEBAR ─── */
     section[data-testid="stSidebar"] {
-        background-color: #070F1E !important;
-        border-right: 1px solid #14233A;
-        width: 300px !important;
+        background: linear-gradient(180deg, #060D1A 0%, #040912 100%) !important;
+        border-right: 1px solid #111E33;
+        width: 290px !important;
     }
-    .text-green { color: #10B981 !important; }
+    section[data-testid="stSidebar"] label {
+        color: #7C91B0 !important;
+        font-size: 0.7rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.8px !important;
+        text-transform: uppercase !important;
+    }
+    section[data-testid="stSidebar"] .stButton button {
+        background: linear-gradient(135deg, #FF671F 0%, #FF8C42 100%) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        font-size: 0.8rem !important;
+        letter-spacing: 1.5px !important;
+        padding: 12px !important;
+        box-shadow: 0 4px 20px rgba(255, 103, 31, 0.35) !important;
+        transition: all 0.2s ease !important;
+    }
+    section[data-testid="stSidebar"] .stButton button:hover {
+        box-shadow: 0 6px 28px rgba(255, 103, 31, 0.55) !important;
+        transform: translateY(-1px) !important;
+    }
 
-    /* Stats Row */
+    /* ─── MAIN HEADER ─── */
+    .mission-header {
+        background: linear-gradient(135deg, #060D1A 0%, #091525 100%);
+        border: 1px solid #111E33;
+        border-radius: 10px;
+        padding: 14px 20px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .mission-badge {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .mission-icon {
+        width: 40px; height: 40px;
+        background: linear-gradient(135deg, #FF671F, #FF8C42);
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem;
+        box-shadow: 0 4px 14px rgba(255,103,31,0.4);
+    }
+    .mission-title { font-size: 1.15rem; font-weight: 800; color: #F0F4F8; letter-spacing: 0.5px; }
+    .mission-sub { font-size: 0.65rem; font-weight: 600; color: #FF671F; letter-spacing: 1.5px; text-transform: uppercase; }
+    .mission-status {
+        display: flex; align-items: center; gap: 8px;
+        background: rgba(16,185,129,0.08);
+        border: 1px solid rgba(16,185,129,0.2);
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-size: 0.7rem; font-weight: 700;
+        color: #10B981; letter-spacing: 1px;
+    }
+    .status-dot { width: 7px; height: 7px; background: #10B981; border-radius: 50%; animation: pulse-green 2s infinite; }
+    @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    /* ─── STAT CARDS ─── */
     .stat-card {
-        background: #091325; border: 1px solid #14233A; border-radius: 8px;
-        padding: 16px; text-align: left;
+        background: linear-gradient(135deg, #080F1E 0%, #091525 100%);
+        border: 1px solid #111E33;
+        border-radius: 10px;
+        padding: 16px 20px;
+        position: relative;
+        overflow: hidden;
+        transition: border-color 0.2s;
     }
-    .stat-label { font-size: 0.65rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .stat-value { font-size: 1.5rem; font-weight: 600; color: #F8FAFC; line-height: 1.2; }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #FF671F, #00B4D8);
+        opacity: 0.6;
+    }
+    .stat-label {
+        font-size: 0.6rem; color: #5A7090;
+        text-transform: uppercase; letter-spacing: 1px;
+        margin-bottom: 6px; font-weight: 600;
+    }
+    .stat-value {
+        font-size: 1.6rem; font-weight: 800;
+        color: #F0F4F8; line-height: 1;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-value.text-green { color: #10B981 !important; }
+    .stat-value.text-cyan  { color: #00B4D8 !important; }
+    .stat-value.text-orange{ color: #FF671F !important; }
+    .text-green { color: #10B981 !important; }
+    .text-cyan  { color: #00B4D8 !important; }
+    .text-orange{ color: #FF671F !important; }
 
-    /* Chat UI */
-    .chat-container { background: #091325; border: 1px solid #14233A; border-radius: 8px; height: calc(100vh - 40px); display: flex; flex-direction: column; }
-    .chat-header { border-bottom: 1px solid #14233A; display: flex; padding: 0 16px; background: #070F1E; border-radius: 8px 8px 0 0; }
-    .chat-tab { padding: 16px; font-size: 0.75rem; font-weight: 600; color: #64748B; cursor: pointer; letter-spacing: 0.5px; }
-    .chat-tab.active { color: #F8FAFC; border-bottom: 2px solid #FF671F; }
-    .chat-body { flex: 1; padding: 24px; overflow-y: auto; }
-    .chat-msg { display: flex; gap: 16px; margin-bottom: 24px; }
-    .avatar { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
-    .avatar.sq { background: #FF671F; color: #FFF; }
-    .avatar.user { background: #1E3150; color: #FFF; }
-    .msg-content { background: #0B172C; border: 1px solid #14233A; border-radius: 8px; padding: 16px; font-size: 0.85rem; line-height: 1.6; color: #E2E8F0; flex: 1; }
-    .msg-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.7rem; font-weight: 600; color: #94A3B8; }
-    .highlight-pill { background: rgba(16,185,129,0.1); color: #10B981; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+    /* ─── IMAGE PANEL ─── */
+    .img-panel {
+        background: #080F1E;
+        border: 1px solid #111E33;
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+    }
+    .img-label {
+        position: absolute; top: 8px; left: 8px;
+        background: rgba(4, 9, 18, 0.85);
+        border: 1px solid #1E3150;
+        border-radius: 5px;
+        padding: 3px 8px;
+        font-size: 0.65rem; font-weight: 700;
+        color: #94A3B8; letter-spacing: 0.8px;
+        text-transform: uppercase;
+        z-index: 10;
+    }
+
+    /* ─── CHAT ─── */
+    div[data-testid="stChatMessage"] {
+        background: #080F1E !important;
+        border: 1px solid #111E33 !important;
+        border-radius: 10px !important;
+        margin-bottom: 10px !important;
+    }
+    div[data-testid="stChatInput"] textarea {
+        background: #080F1E !important;
+        border: 1px solid #1E3150 !important;
+        border-radius: 8px !important;
+        color: #F0F4F8 !important;
+        font-size: 0.85rem !important;
+    }
+    div[data-testid="stChatInput"] textarea:focus {
+        border-color: #FF671F !important;
+        box-shadow: 0 0 0 2px rgba(255,103,31,0.15) !important;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #040912; }
+    ::-webkit-scrollbar-thumb { background: #1E3150; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #FF671F; }
+
+    /* ─── SATELLITE FEED PLACEHOLDER ─── */
+    .sat-placeholder {
+        width: 100%;
+        background: linear-gradient(135deg, #060D1A 0%, #080F1E 100%);
+        border: 1px solid #111E33;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 340px;
+        gap: 12px;
+    }
+    .sat-icon { font-size: 3rem; opacity: 0.15; }
+    .sat-text { font-size: 1rem; font-weight: 700; color: #1E3150; letter-spacing: 3px; text-transform: uppercase; }
+    .sat-sub  { font-size: 0.7rem; color: #0F1E35; letter-spacing: 1px; }
+
+    /* ─── SECTION DIVIDER ─── */
+    .section-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #1E3150, transparent);
+        margin: 16px 0;
+    }
+    
+    /* Hide default Streamlit elements */
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    header { visibility: hidden; }
 </style>
 """)
 
@@ -355,85 +507,117 @@ elif run_btn and img1_file and img2_file:
             
     st.session_state['process_time'] = f"{int((time.time() - start_t) * 1000)}ms"
 
-# ─── MAIN UI RENDER ───────────────────────────────────────────────────────────────────────────────────────────────────────────
-col_map, col_chat = st.columns([1.5, 1])
+# ─── MAIN UI RENDER ────────────────────────────────────────────────────────
+# Mission header bar
+st.html(f"""
+<div class="mission-header">
+    <div class="mission-badge">
+        <div class="mission-icon">🛰️</div>
+        <div>
+            <div class="mission-title">SATQUERY AI</div>
+            <div class="mission-sub">ISRO Disaster Monitoring &amp; Intelligence Core</div>
+        </div>
+    </div>
+    <div style="display:flex; gap:12px; align-items:center;">
+        <div style="font-size:0.65rem; color:#5A7090; font-family:'JetBrains Mono',monospace;">
+            ROUTER: <span style="color:#FF671F;">{st.session_state.get('router_decision','STANDBY')}</span>
+        </div>
+        <div class="mission-status">
+            <div class="status-dot"></div>
+            ONLINE
+        </div>
+    </div>
+</div>
+""")
+
+col_map, col_chat = st.columns([1.55, 1])
 
 with col_map:
-    # Top Map Area
+    # Image panels or placeholder
     if st.session_state.get('img1') is not None and st.session_state.get('mask') is not None:
-        st.markdown("### Analysis Results")
         img_cols = st.columns(3)
         with img_cols[0]:
             disp1 = np.moveaxis(st.session_state['img1'], 0, 2) if st.session_state['img1'].shape[0] in [1, 3, 4] else st.session_state['img1']
-            st.image(disp1, caption="Time 1", use_container_width=True)
+            st.html('<div style="font-size:0.65rem;font-weight:700;color:#5A7090;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">📡 TIME-1 — PRE-EVENT</div>')
+            st.image(disp1, use_container_width=True)
         with img_cols[1]:
             disp2 = np.moveaxis(st.session_state['img2'], 0, 2) if st.session_state['img2'].shape[0] in [1, 3, 4] else st.session_state['img2']
-            st.image(disp2, caption="Time 2", use_container_width=True)
+            st.html('<div style="font-size:0.65rem;font-weight:700;color:#5A7090;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">📡 TIME-2 — POST-EVENT</div>')
+            st.image(disp2, use_container_width=True)
         with img_cols[2]:
-            st.image(st.session_state['mask'], caption="AI Change Mask", use_container_width=True, clamp=True)
-        st.markdown("<hr style='border-color: #14233A;'>", unsafe_allow_html=True)
+            st.html('<div style="font-size:0.65rem;font-weight:700;color:#FF671F;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">🔴 AI CHANGE MASK</div>')
+            st.image(st.session_state['mask'], use_container_width=True, clamp=True)
+        st.html('<div class="section-divider"></div>')
     else:
         st.html('''
-        <div style="position:relative; width:100%; height:calc(100vh - 160px); background:#070F1E; border:1px solid #14233A; border-radius:8px; overflow:hidden; margin-bottom:16px;">
-            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#1E3150; font-size:2rem; font-weight:700;">
-                SATELLITE FEED ACTIVE
-            </div>
+        <div class="sat-placeholder">
+            <div class="sat-icon">🛰️</div>
+            <div class="sat-text">Satellite Feed Active</div>
+            <div class="sat-sub">Upload imagery or enable TensorRT Cache to begin analysis</div>
         </div>
-
         ''')
 
+    # Stat cards
     st.html(f'''
-    <div style="display:flex; justify-content:space-between; gap:16px;">
+    <div style="display:flex; gap:12px; margin-top:14px;">
         <div class="stat-card" style="flex:1;">
-            <div class="stat-label">TOTAL AREA CHANGED</div>
-            <div class="stat-value">{st.session_state.get('area_changed', '0.0%')}</div>
+            <div class="stat-label">Total Area Changed</div>
+            <div class="stat-value text-orange">{st.session_state.get('area_changed', '0.0%')}</div>
         </div>
         <div class="stat-card" style="flex:1;">
-            <div class="stat-label">MODEL CONFIDENCE</div>
+            <div class="stat-label">Model Confidence</div>
             <div class="stat-value text-green">{st.session_state.get('confidence', '0.0%')}</div>
         </div>
         <div class="stat-card" style="flex:1;">
-            <div class="stat-label">ROUTER DECISION</div>
-            <div class="stat-value" style="font-size:1.1rem; margin-top:8px;">{st.session_state.get('router_decision', 'STANDBY')}</div>
+            <div class="stat-label">Router Decision</div>
+            <div class="stat-value" style="font-size:1rem; margin-top:4px; color:#F0F4F8;">{st.session_state.get('router_decision', 'STANDBY')}</div>
         </div>
         <div class="stat-card" style="flex:1;">
-            <div class="stat-label">INFERENCE TIME</div>
+            <div class="stat-label">Inference Time</div>
             <div class="stat-value text-cyan">{st.session_state.get('process_time', '0ms')}</div>
         </div>
     </div>
     ''')
 
 with col_chat:
-    st.markdown("### VQA Chat")
+    # Chat header
+    st.html("""
+    <div style="background:linear-gradient(135deg,#060D1A,#091525); border:1px solid #111E33;
+                border-radius:10px 10px 0 0; padding:12px 18px; margin-bottom:0;
+                display:flex; align-items:center; gap:10px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#FF671F;
+                    box-shadow:0 0 8px rgba(255,103,31,0.6);"></div>
+        <span style="font-size:0.75rem;font-weight:700;color:#F0F4F8;letter-spacing:1.5px;">VQA INTELLIGENCE CHAT</span>
+        <span style="margin-left:auto;font-size:0.6rem;color:#5A7090;font-family:'JetBrains Mono',monospace;">
+            GEMINI · VISION
+        </span>
+    </div>
+    """)
     
-    # Create a scrollable container for chat messages
-    chat_container = st.container(height=520)
+    # Scrollable chat container
+    chat_container = st.container(height=430)
     
     with chat_container:
         if not st.session_state['chat_history']:
-            st.chat_message("assistant").write("Waiting for analysis to execute...")
+            st.chat_message("assistant").write("🛰️ System ready. Execute analysis to load satellite imagery and begin VQA.")
         
         for msg in st.session_state['chat_history']:
             st.chat_message(msg["role"]).write(msg["content"])
             
     # Handle new chat input
-    if user_input := st.chat_input("Ask a follow-up question..."):
-        # Display user input immediately
+    if user_input := st.chat_input("Ask about the imagery — 'What crops changed?' or 'Estimate flood extent'..."):
         st.session_state['chat_history'].append({"role": "user", "content": user_input})
         with chat_container:
             st.chat_message("user").write(user_input)
             
-        # Run VLM with the current images
         with chat_container:
             with st.chat_message("assistant"):
-                with st.spinner("Analyzing..."):
-                    if 'img1' in st.session_state and st.session_state['img1'] is not None:
+                with st.spinner("Querying VLM..."):
+                    if st.session_state.get('img1') is not None:
                         img1_hwc = np.moveaxis(st.session_state['img1'], 0, 2) if st.session_state['img1'].shape[0] in [1, 3, 4] else st.session_state['img1']
                         img2_hwc = np.moveaxis(st.session_state['img2'], 0, 2) if st.session_state['img2'].shape[0] in [1, 3, 4] else st.session_state['img2']
-                        
                         img1_pil = Image.fromarray(img1_hwc.astype('uint8'))
                         img2_pil = Image.fromarray(img2_hwc.astype('uint8'))
-                        
                         try:
                             response = run_vlm([img1_pil, img2_pil], user_input)
                             st.write(response)
@@ -441,4 +625,4 @@ with col_chat:
                         except Exception as e:
                             st.error(f"Error: {e}")
                     else:
-                        st.error("No images loaded. Please execute an analysis first.")
+                        st.error("No images loaded. Execute analysis first.")
