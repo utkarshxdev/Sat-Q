@@ -102,22 +102,82 @@ with st.sidebar:
                         use_container_width=True, type="primary")
 
 import torch
-from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
-from peft import PeftModel
-from qwen_vl_utils import process_vision_info
+from dotenv import load_dotenv
+load_dotenv()
+
+# Set HF token for authenticated downloads
+hf_token = os.environ.get("hugging_face_access_token") or os.environ.get("HF_TOKEN")
+if hf_token:
+    os.environ["HF_TOKEN"] = hf_token
+
+LOCAL_VLM_AVAILABLE = False
+try:
+    from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
+    from peft import PeftModel
+    from qwen_vl_utils import process_vision_info
+    LOCAL_VLM_AVAILABLE = True
+except ImportError:
+    pass
 
 @st.cache_resource
 def load_qwen_vlm():
     base_id = "Qwen/Qwen2.5-VL-3B-Instruct"
     device = "mps" if torch.backends.mps.is_available() else "cpu"
+    
+    # Check if model is already cached locally to avoid hanging on download
+    from huggingface_hub import try_to_load_from_cache
+    cached = try_to_load_from_cache(base_id, "model.safetensors.index.json")
+    if cached is None or isinstance(cached, str) == False:
+        raise RuntimeError("Base model not cached locally. Skipping to Gemini fallback.")
+    
     base_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
         base_id, 
         torch_dtype=torch.float16,
-        device_map=device
+        device_map=device,
+        token=hf_token
     )
     model = PeftModel.from_pretrained(base_model, "./adapter")
-    processor = AutoProcessor.from_pretrained(base_id)
+    processor = AutoProcessor.from_pretrained(base_id, token=hf_token)
     return model, processor, device
+
+def gemini_fallback(images_pil, prompt):
+    """Fallback to Gemini API if local model fails."""
+    from google import genai
+    api_key = os.environ.get("gemini_api") or os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        return "No API key found for Gemini fallback."
+    client = genai.Client(api_key=api_key)
+    # Try multiple models in case one is overloaded
+    for model_name in ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite"]:
+        try:
+            res = client.models.generate_content(model=model_name, contents=[*images_pil, prompt])
+            return res.text
+        except Exception:
+            continue
+    return "All Gemini models temporarily unavailable. Please try again."
+
+def run_vlm(images_pil, prompt):
+    """Try local Qwen+LoRA first, fall back to Gemini API."""
+    if LOCAL_VLM_AVAILABLE:
+        try:
+            model, processor, device = load_qwen_vlm()
+            messages = [{"role": "user", "content": []}]
+            for img in images_pil:
+                messages[0]["content"].append({"type": "image", "image": img})
+            messages[0]["content"].append({"type": "text", "text": prompt})
+            
+            text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            image_inputs, video_inputs = process_vision_info(messages)
+            inputs = processor(
+                text=[text], images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt"
+            ).to(device)
+            
+            generated_ids = model.generate(**inputs, max_new_tokens=128)
+            generated_ids_trimmed = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
+            return processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        except Exception as e:
+            print(f"Local VLM failed ({e}), falling back to Gemini API...")
+    return gemini_fallback(images_pil, prompt)
 
 # ─── DEFAULTS ─────────────────────────────────────────────────────────────
 area_changed = "0.0%"
@@ -157,25 +217,12 @@ if demo_mode:
     st.session_state['img2'] = img2_array
     st.session_state['mask'] = heuristic_mask
     
-    # Live Gemini VQA
+    # Live VLM (Local Qwen → Gemini fallback)
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=os.environ.get("gemini_api") or os.environ.get("GEMINI_API_KEY"))
-        model = genai.GenerativeModel('models/gemini-3.6-flash')
-        
         img1_pil = Image.fromarray(img1_hwc.astype('uint8'))
         img2_pil = Image.fromarray(img2_hwc.astype('uint8'))
-        
         prompt = f"As a geospatial expert, compare these two satellite images. The model flagged {area_changed} of the area as changed. Explain what visually changed based on the images. Do not use asterisks."
-        
-        res = model.generate_content([img1_pil, img2_pil, prompt])
-        ai_summary = res.text + '''
-
-<div style="display:flex; gap:8px; margin-top:12px;">
-        <span style="border:1px solid #1E3150; border-radius:4px; padding:2px 6px; font-size:0.65rem; color:#94A3B8;">□ T1 / T2</span>
-        <span style="border:1px solid #1E3150; border-radius:4px; padding:2px 6px; font-size:0.65rem; color:#94A3B8;">~ SAR</span>
-        <span style="border:1px solid #1E3150; border-radius:4px; padding:2px 6px; font-size:0.65rem; color:#94A3B8;">⚲ VQA</span>
-    </div>'''
+        ai_summary = run_vlm([img1_pil, img2_pil], prompt)
     except Exception as e:
         ai_summary = f"VLM ERROR: {e}"
 
@@ -241,19 +288,12 @@ elif run_btn and img1_file and img2_file:
                     area_changed = f"{pct:.1f}%"
                     confidence = "89.4%"  # Hardcode a confident score
                     
-                    # 🚀 LIVE CHATBOT INJECTION 🚀
+                    # 🚀 LIVE CHATBOT (Local Qwen → Gemini fallback) 🚀
                     try:
-                        import google.generativeai as genai
-                        genai.configure(api_key=os.environ.get("gemini_api") or os.environ.get("GEMINI_API_KEY"))
-                        model = genai.GenerativeModel('models/gemini-3.6-flash')
-                        
                         img1_pil = Image.fromarray(img1_hwc.astype('uint8'))
                         img2_pil = Image.fromarray(img2_hwc.astype('uint8'))
-                        
                         prompt = f"As a geospatial expert, compare these two satellite images (Time 1 and Time 2). The model flagged {area_changed} of the area as changed. Briefly explain what visually changed in 2-3 sentences based on the images, keeping a professional intelligence tone. Do not use asterisks."
-                        
-                        res = model.generate_content([img1_pil, img2_pil, prompt])
-                        ai_summary = res.text
+                        ai_summary = run_vlm([img1_pil, img2_pil], prompt)
                     except Exception as e:
                         print("VLM ERROR:", e)
                         ai_summary = f"VLM ERROR: {e}"
@@ -270,28 +310,9 @@ elif run_btn and img1_file and img2_file:
                 
         elif router_decision == "SINGLE_IMAGE_VQA":
             try:
-                model, processor, device = load_qwen_vlm()
-                img_pil = Image.fromarray(img1_hwc.astype('uint8')) if img1_hwc.dtype != 'uint8' else Image.fromarray(img1_hwc)
-                
-                messages = [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "image", "image": img_pil},
-                            {"type": "text", "text": "As a geospatial intelligence expert, answer this query about the satellite image: " + query}
-                        ]
-                    }
-                ]
-                
-                text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-                image_inputs, video_inputs = process_vision_info(messages)
-                inputs = processor(
-                    text=[text], images=image_inputs, videos=video_inputs, padding=True, return_tensors="pt"
-                ).to(device)
-                
-                generated_ids = model.generate(**inputs, max_new_tokens=128)
-                generated_ids_trimmed = [out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)]
-                ai_summary = processor.batch_decode(generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+                img_pil = Image.fromarray(img1_hwc.astype('uint8'))
+                prompt = "As a geospatial intelligence expert, answer this query about the satellite image: " + query
+                ai_summary = run_vlm([img_pil], prompt)
                 
                 confidence = "99.0%"
                 st.session_state['img1'] = img1_array
