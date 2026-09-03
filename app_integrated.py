@@ -5,8 +5,14 @@ Combines Palak's HTML/CSS with Utkarsh's PyTorch models, Jayant's Geo Pipeline, 
 import sys
 import os
 
-# Add required paths for imports before importing from app
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "ai-router"))
+# Ensure ai-router is on sys.path and remove any conflicting 'app' module
+ai_router_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "ai-router"))
+if ai_router_dir not in sys.path:
+    sys.path.insert(0, ai_router_dir)
+
+# If Streamlit previously cached an 'app' module that wasn't a package, purge it
+if "app" in sys.modules and not hasattr(sys.modules["app"], "__path__"):
+    del sys.modules["app"]
 
 from app.schemas import ToolRequest, ImageContext
 from app.router import route_request
